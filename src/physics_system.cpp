@@ -34,10 +34,10 @@ void PhysicsSystem::step(float elapsed_ms, float window_width_px, float window_h
 	for(uint i = 0; i< motion_registry.size(); i++)
 	{
 		// !!! TODO A1: update motion.position based on step_seconds and motion.velocity
-		//Motion& motion = motion_registry.components[i];
-		//Entity entity = motion_registry.entities[i];
-		//float step_seconds = 1.0f * (elapsed_ms / 1000.f);
-		(void)elapsed_ms; // placeholder to silence unused warning until implemented
+		Motion& motion = motion_registry.components[i];
+		Entity entity = motion_registry.entities[i];
+		float step_seconds = 1.0f * (elapsed_ms / 1000.f);
+		motion.position += motion.velocity * step_seconds;
 	}
 
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -107,4 +107,32 @@ void PhysicsSystem::step(float elapsed_ms, float window_width_px, float window_h
 	// TODO A3: HANDLE PEBBLE collisions HERE
 	// DON'T WORRY ABOUT THIS UNTIL ASSIGNMENT 3
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	// source: https://www.youtube.com/watch?v=kxWBXd7ujx0&t=674s
+	float G = 1;
+	float h = elapsed_ms / 1000;
+	float massPlanet = 50000;
+	Motion& playerMotion = registry.motions.get(registry.players.entities[0]);
+
+	vec2 center = { 600,400 };
+	vec2 playerPos = playerMotion.position;
+
+	auto gravity = [center, G, massPlanet](vec2 position) {
+		vec2 toCenter = center - position;
+		float r = sqrt(toCenter.x * toCenter.x + toCenter.y * toCenter.y);
+		return toCenter * ((G * massPlanet) / (r * r));
+	};
+	
+	vec2 xn = playerMotion.position;
+	vec2 vn = playerMotion.velocity;
+
+	auto v = [vn, gravity](vec2 x, float h) {
+		return vn + gravity(x) * h;
+	};
+
+	auto a = [xn, gravity](vec2 v, float h) {
+		return gravity(xn) + gravity(xn + v * h) * h;
+	};
+
+	playerMotion.position = xn + h * v(xn, 0);
+	playerMotion.velocity = vn + h * a(vn, 0);
 }
