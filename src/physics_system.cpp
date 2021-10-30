@@ -107,6 +107,8 @@ void PhysicsSystem::step(float elapsed_ms, float window_width_px, float window_h
 	// TODO A3: HANDLE PEBBLE collisions HERE
 	// DON'T WORRY ABOUT THIS UNTIL ASSIGNMENT 3
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	
+	// use semi-implicit euler for position/velocity calculations 
 	// source: https://www.youtube.com/watch?v=kxWBXd7ujx0&t=674s
 	float G = 1;
 	float h = elapsed_ms / 1000;
