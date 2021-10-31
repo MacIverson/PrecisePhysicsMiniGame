@@ -137,4 +137,6 @@ void PhysicsSystem::step(float elapsed_ms, float window_width_px, float window_h
 
 	playerMotion.position = xn + h * v(xn, 0);
 	playerMotion.velocity = vn + h * a(vn, 0);
+
+	playerMotion.angle = atan2(playerMotion.velocity.y, playerMotion.velocity.x);
 }
