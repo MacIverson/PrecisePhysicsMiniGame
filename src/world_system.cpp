@@ -13,6 +13,7 @@ float velocityLineDist = 0;
 vec2 launchVelocity = { 0,0 };
 vec2 mousePos = { 0,0 };
 bool launch = false;
+bool shouldDraw = true;
 
 // Game configuration
 const size_t MAX_TURTLES = 15;
@@ -179,6 +180,7 @@ bool WorldSystem::step(float elapsed_ms_since_last_update) {
 		if (counter.counter_ms < 0) {
 			registry.deathTimers.remove(entity);
 			screen.darken_screen_factor = 0;
+			shouldDraw = false;
             restart_game();
 			return true;
 		}
@@ -186,7 +188,7 @@ bool WorldSystem::step(float elapsed_ms_since_last_update) {
 	// reduce window brightness if any of the present salmons is dying
 	screen.darken_screen_factor = 1 - min_counter_ms / 3000;
 
-	if (!launch) {
+	if (!launch && shouldDraw) {
 		Motion& playerMotion = registry.motions.get(registry.players.entities[0]);
 		Entity line = createLine(launchDirection, { velocityLineDist, 10 });
 		registry.motions.get(line).angle = atan2(mousePos.y - playerMotion.position.y, mousePos.x - playerMotion.position.x);
@@ -224,6 +226,8 @@ void WorldSystem::restart_game() {
 
 	// create target
 	createFish(renderer, { 600, 600 });
+
+	shouldDraw = true;
 }
 
 // Compute collisions between entities
@@ -244,10 +248,16 @@ void WorldSystem::handle_collisions() {
 				// initiate death unless already dying
 				if (!registry.deathTimers.has(entity)) {
 					// Scream, reset timer, and make the salmon sink
+					launch = false;
+					shouldDraw = false;
 					registry.deathTimers.emplace(entity);
 					Mix_PlayChannel(-1, salmon_dead_sound, 0);
-					registry.motions.get(entity).angle = 3.1415f;
-					registry.motions.get(entity).velocity = { 0, 80 };
+					//registry.motions.get(entity).angle = 3.1415f;
+					registry.motions.get(entity).velocity = { 0, 0 };
+					registry.colors.get(entity).r = 255;
+					registry.colors.get(entity).g = 0;
+					registry.colors.get(entity).b = 0;
+					
 
 					// !!! TODO A1: change the salmon color on death
 				}
@@ -255,8 +265,15 @@ void WorldSystem::handle_collisions() {
 			// Checking Player - SoftShell collisions
 			else if (registry.softShells.has(entity_other)) {
 				if (!registry.deathTimers.has(entity)) {
+					registry.deathTimers.emplace(entity);
 					// chew, count points, and set the LightUp timer
-					registry.remove_all_components_of(entity_other);
+					launch = false;
+					shouldDraw = false;
+					registry.motions.get(entity).velocity = { 0, 0 };
+					registry.colors.get(entity).r = 0;
+					registry.colors.get(entity).g = 255;
+					registry.colors.get(entity).b = 0;
+					//registry.remove_all_components_of(entity_other);
 					Mix_PlayChannel(-1, salmon_eat_sound, 0);
 					++points;
 
@@ -317,6 +334,7 @@ void WorldSystem::on_key(int key, int, int action, int mod) {
 		float y = mousePos.y - playerMotion.position.y;
 		launchDirection = { x/2, y/2 };
 		playerMotion.velocity = launchDirection;
+		shouldDraw = false;
 	}
 }
 
@@ -335,4 +353,8 @@ void WorldSystem::on_mouse_move(vec2 mouse_position) {
 	launchDirection = { (mouse_position.x + playerMotion.position.x) * 0.5, (mouse_position.y + playerMotion.position.y) * 0.5 };
 	velocityLineDist = sqrt(diffX * diffX + diffY * diffY);
 	launchVelocity = mouse_position;
+
+	if (!launch) {
+		playerMotion.angle = atan2(diffY, diffX);
+	}
 }
