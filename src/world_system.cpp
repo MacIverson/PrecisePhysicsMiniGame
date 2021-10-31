@@ -8,6 +8,12 @@
 
 #include "physics_system.hpp"
 
+vec2 launchDirection = { 0,0 };
+float velocityLineDist = 0;
+vec2 launchVelocity = { 0,0 };
+vec2 mousePos = { 0,0 };
+bool launch = false;
+
 // Game configuration
 const size_t MAX_TURTLES = 15;
 const size_t MAX_FISH = 5;
@@ -180,6 +186,12 @@ bool WorldSystem::step(float elapsed_ms_since_last_update) {
 	// reduce window brightness if any of the present salmons is dying
 	screen.darken_screen_factor = 1 - min_counter_ms / 3000;
 
+	if (!launch) {
+		Motion& playerMotion = registry.motions.get(registry.players.entities[0]);
+		Entity line = createLine(launchDirection, { velocityLineDist, 10 });
+		registry.motions.get(line).angle = atan2(mousePos.y - playerMotion.position.y, mousePos.x - playerMotion.position.x);
+	}
+
 	// !!! TODO A1: update LightUp timers and remove if time drops below zero, similar to the death counter
 
 	return true;
@@ -204,7 +216,7 @@ void WorldSystem::restart_game() {
 
 	// Create a new salmon
 	player_salmon = createSalmon(renderer, { 100, 600 });
-	registry.motions.get(player_salmon).velocity.y = -100;
+	//registry.motions.get(player_salmon).velocity.y = -100;
 	registry.colors.insert(player_salmon, {1, 0.8f, 0.8f});
 
 	// create planet
@@ -297,6 +309,15 @@ void WorldSystem::on_key(int key, int, int action, int mod) {
 		printf("Current speed = %f\n", current_speed);
 	}
 	current_speed = fmax(0.f, current_speed);
+
+	if (key == GLFW_KEY_SPACE && action == GLFW_RELEASE) {
+		launch = true;
+		Motion& playerMotion = registry.motions.get(registry.players.entities[0]);
+		float x = mousePos.x - playerMotion.position.x;
+		float y = mousePos.y - playerMotion.position.y;
+		launchDirection = { x/2, y/2 };
+		playerMotion.velocity = launchDirection;
+	}
 }
 
 void WorldSystem::on_mouse_move(vec2 mouse_position) {
@@ -305,10 +326,13 @@ void WorldSystem::on_mouse_move(vec2 mouse_position) {
 	// xpos and ypos are relative to the top-left of the window, the salmon's
 	// default facing direction is (1, 0)
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	mousePos = mouse_position;
 
 	Motion& playerMotion = registry.motions.get(player_salmon);
 	float diffX = mouse_position.x - playerMotion.position.x;
 	float diffY = mouse_position.y - playerMotion.position.y;
 
-	(vec2)mouse_position; // dummy to avoid compiler warning
+	launchDirection = { (mouse_position.x + playerMotion.position.x) * 0.5, (mouse_position.y + playerMotion.position.y) * 0.5 };
+	velocityLineDist = sqrt(diffX * diffX + diffY * diffY);
+	launchVelocity = mouse_position;
 }

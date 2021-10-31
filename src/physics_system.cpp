@@ -2,6 +2,8 @@
 #include "physics_system.hpp"
 #include "world_init.hpp"
 
+extern bool launch;
+
 // Returns the local bounding coordinates scaled by the current size of the entity
 vec2 get_bounding_box(const Motion& motion)
 {
@@ -110,33 +112,35 @@ void PhysicsSystem::step(float elapsed_ms, float window_width_px, float window_h
 	
 	// use semi-implicit euler for position/velocity calculations 
 	// source: https://www.youtube.com/watch?v=kxWBXd7ujx0&t=674s
-	float G = 1;
-	float h = elapsed_ms / 1000;
-	float massPlanet = 50000;
-	Motion& playerMotion = registry.motions.get(registry.players.entities[0]);
+	if (launch) {
+		float G = 1;
+		float h = elapsed_ms / 1000;
+		float massPlanet = 50000;
+		Motion& playerMotion = registry.motions.get(registry.players.entities[0]);
 
-	vec2 center = { 600,400 };
-	vec2 playerPos = playerMotion.position;
+		vec2 center = { 600,400 };
+		vec2 playerPos = playerMotion.position;
 
-	auto gravity = [center, G, massPlanet](vec2 position) {
-		vec2 toCenter = center - position;
-		float r = sqrt(toCenter.x * toCenter.x + toCenter.y * toCenter.y);
-		return toCenter * ((G * massPlanet) / (r * r));
-	};
-	
-	vec2 xn = playerMotion.position;
-	vec2 vn = playerMotion.velocity;
+		auto gravity = [center, G, massPlanet](vec2 position) {
+			vec2 toCenter = center - position;
+			float r = sqrt(toCenter.x * toCenter.x + toCenter.y * toCenter.y);
+			return toCenter * ((G * massPlanet) / (r * r));
+		};
 
-	auto v = [vn, gravity](vec2 x, float h) {
-		return vn + gravity(x) * h;
-	};
+		vec2 xn = playerMotion.position;
+		vec2 vn = playerMotion.velocity;
 
-	auto a = [xn, gravity](vec2 v, float h) {
-		return gravity(xn) + gravity(xn + v * h) * h;
-	};
+		auto v = [vn, gravity](vec2 x, float h) {
+			return vn + gravity(x) * h;
+		};
 
-	playerMotion.position = xn + h * v(xn, 0);
-	playerMotion.velocity = vn + h * a(vn, 0);
+		auto a = [xn, gravity](vec2 v, float h) {
+			return gravity(xn) + gravity(xn + v * h) * h;
+		};
 
-	playerMotion.angle = atan2(playerMotion.velocity.y, playerMotion.velocity.x);
+		playerMotion.position = xn + h * v(xn, 0);
+		playerMotion.velocity = vn + h * a(vn, 0);
+
+		playerMotion.angle = atan2(playerMotion.velocity.y, playerMotion.velocity.x);
+	}
 }
