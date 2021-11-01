@@ -188,10 +188,21 @@ bool WorldSystem::step(float elapsed_ms_since_last_update) {
 	// reduce window brightness if any of the present salmons is dying
 	screen.darken_screen_factor = 1 - min_counter_ms / 3000;
 
+	Motion& playerMotion = registry.motions.get(registry.players.entities[0]);
 	if (!launch && shouldDraw) {
-		Motion& playerMotion = registry.motions.get(registry.players.entities[0]);
+		//Motion& playerMotion = registry.motions.get(registry.players.entities[0]);
 		Entity line = createLine(launchDirection, { velocityLineDist, 10 });
 		registry.motions.get(line).angle = atan2(mousePos.y - playerMotion.position.y, mousePos.x - playerMotion.position.x);
+	}
+
+	if (playerMotion.velocity.x < 0 && playerMotion.position.x > 100 && playerMotion.position.x < 500) {
+		launch = false;
+		playerMotion.velocity = { 0,0 };
+		registry.deathTimers.emplace(registry.players.entities[0]);
+		registry.colors.get(registry.players.entities[0]).r = 255;
+		registry.colors.get(registry.players.entities[0]).g = 0;
+		registry.colors.get(registry.players.entities[0]).b = 0;
+		Mix_PlayChannel(-1, salmon_dead_sound, 0);
 	}
 
 	// !!! TODO A1: update LightUp timers and remove if time drops below zero, similar to the death counter
@@ -265,17 +276,31 @@ void WorldSystem::handle_collisions() {
 			// Checking Player - SoftShell collisions
 			else if (registry.softShells.has(entity_other)) {
 				if (!registry.deathTimers.has(entity)) {
-					registry.deathTimers.emplace(entity);
+					//
 					// chew, count points, and set the LightUp timer
-					launch = false;
-					shouldDraw = false;
-					registry.motions.get(entity).velocity = { 0, 0 };
-					registry.colors.get(entity).r = 0;
-					registry.colors.get(entity).g = 255;
-					registry.colors.get(entity).b = 0;
-					//registry.remove_all_components_of(entity_other);
-					Mix_PlayChannel(-1, salmon_eat_sound, 0);
-					++points;
+					if (registry.motions.get(entity).velocity.x <= 0) {
+						registry.deathTimers.emplace(entity);
+						launch = false;
+						shouldDraw = false;
+						registry.motions.get(entity).velocity = { 0, 0 };
+						registry.colors.get(entity).r = 0;
+						registry.colors.get(entity).g = 255;
+						registry.colors.get(entity).b = 0;
+						//registry.remove_all_components_of(entity_other);
+						Mix_PlayChannel(-1, salmon_eat_sound, 0);
+						++points;
+					}
+					else {
+						launch = false;
+						shouldDraw = false;
+						registry.deathTimers.emplace(entity);
+						Mix_PlayChannel(-1, salmon_dead_sound, 0);
+						//registry.motions.get(entity).angle = 3.1415f;
+						registry.motions.get(entity).velocity = { 0, 0 };
+						registry.colors.get(entity).r = 255;
+						registry.colors.get(entity).g = 0;
+						registry.colors.get(entity).b = 0;
+					}
 
 					// !!! TODO A1: create a new struct called LightUp in components.hpp and add an instance to the salmon entity by modifying the ECS registry
 				}
